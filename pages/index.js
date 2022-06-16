@@ -1,8 +1,47 @@
 import Head from 'next/head'
 import Image from 'next/image'
 import styles from '../styles/Home.module.css'
+import { Configuration, Session, V0alpha2Api } from '@ory/kratos-client'
+import { edgeConfig } from '@ory/integrations/next'
+import { AxiosError } from 'axios'
+import { useEffect, useState } from 'react'
+
+const kratos = new V0alpha2Api(new Configuration(edgeConfig))
+console.log(kratos)
 
 export default function Home() {
+
+  const [session, setSession] = useState()
+
+  const [logoutUrl, setLogoutUrl] = useState()
+
+  const [error, setError] = useState()
+
+  useEffect(() => {
+    // If the session or error have been loaded, do nothing.
+    if (session || error) {
+      return
+    }
+
+    kratos
+      .toSession()
+      .then(({ data: session }) => {
+        setSession(session)
+
+        return kratos
+          .createSelfServiceLogoutFlowUrlForBrowsers()
+          .then(({ data }) => {
+            setLogoutUrl(data.logout_url)
+          })
+      })
+      .catch((err) => {
+        setError({
+          error: err.toString(),
+          data: err.response?.data
+        })
+      })
+  }, [session, error])
+
   return (
     <div className={styles.container}>
       <Head>
